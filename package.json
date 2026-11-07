@@ -1,0 +1,14 @@
+{
+  "name": "leetlens",
+  "version": "1.0.0",
+  "description": "LeetCode profile dashboard with insights and a Gemini-powered coach",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  }
+}

@@ -1,0 +1,1151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>LeetLens</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Paste a LeetCode username and get a full read of the profile: difficulty mix, topic coverage, consistency, contests and a personal AI coach.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2386CF80'/%3E%3Ccircle cx='16' cy='16' r='8.5' fill='none' stroke='%230A1A0D' stroke-width='3' stroke-dasharray='40 60' stroke-linecap='round' transform='rotate(130 16 16)'/%3E%3Ccircle cx='16' cy='16' r='2.6' fill='%230A1A0D'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+/* Layout: black app shell with a sidebar; a profile band, a six-tile stat strip, then a
+   two-column card grid with the AI coach as a sticky right rail. Neon green on pure black.
+   Phones get a bottom tab bar and the coach as a bottom sheet. Single dark theme by design. */
+:root {
+  color-scheme: dark;
+  --bg: #000000; --shell: #020403; --panel: #040705;
+  --card: #080D0A; --card-2: #0B130E; --inset: #0E1712;
+  --line: rgba(134,207,128,.10); --line-2: rgba(134,207,128,.18); --line-n: rgba(255,255,255,.07);
+  --fg: #F1F5F1; --muted: #9DAAA0; --faint: #66736A;
+  --green: #86CF80; --green-hi: #A6E39F; --neon: #9BE35A; --on-green: #06140A;
+  --good: #9BE35A; --warn: #EAE33A; --bad: #F2445B;
+  --easy: #57D6A6; --medium: #F2C744; --hard: #F2566B;
+  --track: rgba(255,255,255,.07); --pill: #000000;
+  --heat-0: #101712; --heat-1: #17442A; --heat-2: #24753A; --heat-3: #4FB24E; --heat-4: #A5EE5A;
+  --scrim: rgba(0,0,0,.7);
+  --f: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --r: 18px; --r-lg: 28px;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body { margin: 0; min-height: 100%; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--f); -webkit-font-smoothing: antialiased; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 50; background: var(--bg); }
+.glow { position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(55% 45% at 12% 0%, rgba(60,170,80,.22), transparent 70%), radial-gradient(45% 40% at 100% 100%, rgba(50,160,80,.18), transparent 70%); }
+a { color: inherit; }
+button, input, select { font: inherit; color: inherit; }
+img { max-width: 100%; }
+:focus-visible { outline: 2px solid var(--green); outline-offset: 2px; border-radius: 8px; }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.label { font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+
+/* Shared */
+.brand { display: inline-flex; align-items: center; gap: 10px; font: 800 22px/1 var(--f); letter-spacing: -.03em; background: none; border: 0; padding: 0; cursor: pointer; color: var(--fg); }
+.brand svg { width: 32px; height: 32px; flex: none; }
+.brand b { color: var(--green); font-weight: 800; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 46px; padding: 0 20px; border-radius: 12px; border: 0; background: var(--green); color: var(--on-green); font-weight: 700; cursor: pointer; white-space: nowrap; transition: background .15s, transform .15s, box-shadow .15s; }
+.btn:hover { background: var(--green-hi); box-shadow: 0 0 24px rgba(134,207,128,.35); }
+.btn:active { transform: scale(.98); }
+.btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.btn-dark { background: var(--pill); color: var(--fg); border: 1px solid var(--line-2); }
+.btn-dark:hover { background: #07100A; box-shadow: none; border-color: var(--green); }
+.btn-sm { height: 36px; padding: 0 14px; font-size: 13.5px; border-radius: 10px; }
+.icon-circle { width: 46px; height: 46px; border-radius: 50%; background: #000; border: 1px solid var(--line-2); display: grid; place-items: center; flex: none; }
+.icon-circle svg { width: 21px; height: 21px; stroke: var(--green); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ico { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.d-easy { color: var(--easy); } .d-medium { color: var(--medium); } .d-hard { color: var(--hard); }
+.st-good { color: var(--good); } .st-warn { color: var(--warn); } .st-bad { color: var(--bad); }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.card { min-width: 0; padding: 20px; border-radius: var(--r); background: linear-gradient(165deg, var(--card-2), var(--card)); border: 1px solid var(--line); }
+.card-h { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 12px; margin-bottom: 16px; flex-wrap: wrap; }
+.card-h h3 { margin: 0; font-size: 16.5px; font-weight: 700; letter-spacing: -.01em; }
+.card-h .aside { color: var(--muted); font-size: 12.5px; }
+.empty { color: var(--muted); font-size: 14px; }
+
+/* ================= LANDING ================= */
+.landing { position: relative; z-index: 1; }
+.lhead { display: flex; align-items: center; gap: 24px; padding-block: 22px; }
+.lnav { display: flex; gap: 26px; margin-left: auto; color: var(--muted); font-size: 14.5px; }
+.lnav a { text-decoration: none; } .lnav a:hover { color: var(--fg); }
+.hero { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 56px; align-items: center; padding-block: clamp(32px, 7vw, 88px) 72px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: rgba(134,207,128,.08); border: 1px solid rgba(134,207,128,.25); color: var(--green-hi); font-size: 13px; font-weight: 600; }
+.chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
+.hero h1 { font: 800 clamp(38px, 5.6vw, 66px)/1.02 var(--f); letter-spacing: -.045em; margin: 22px 0 18px; text-wrap: balance; }
+.hero h1 span { color: var(--green); text-shadow: 0 0 40px rgba(134,207,128,.35); }
+.hero .lede { font-size: 17.5px; color: var(--muted); max-width: 50ch; margin: 0 0 30px; }
+.hsearch { display: flex; align-items: center; gap: 8px; padding: 7px 7px 7px 18px; border-radius: 18px; background: #050A07; border: 1px solid var(--line-2); max-width: 540px; transition: border-color .2s, box-shadow .2s; }
+.hsearch:focus-within { border-color: rgba(134,207,128,.7); box-shadow: 0 0 0 5px rgba(134,207,128,.12), 0 0 40px rgba(134,207,128,.15); }
+.hsearch .ico { color: var(--faint); }
+.hsearch input { flex: 1; min-width: 0; height: 46px; border: 0; background: none; outline: 0; font-size: 16px; }
+.hsearch input::placeholder { color: var(--faint); }
+.form-error { color: var(--bad); font-size: 14px; margin-top: 10px; min-height: 1.4em; }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--faint); font-size: 13.5px; }
+.qbtn { border: 1px solid var(--line-2); background: #000; border-radius: 999px; padding: 7px 14px; cursor: pointer; font-size: 13.5px; color: var(--fg); }
+.qbtn:hover { border-color: var(--green); color: var(--green-hi); }
+.hero-facts { display: flex; gap: 28px; margin-top: 36px; flex-wrap: wrap; }
+.hero-facts div { display: grid; }
+.hero-facts b { font-size: 26px; font-weight: 800; letter-spacing: -.03em; }
+.hero-facts span { color: var(--muted); font-size: 13px; }
+.hero-visual { position: relative; display: grid; gap: 14px; padding: 18px; border-radius: var(--r-lg); background: radial-gradient(80% 60% at 0% 0%, rgba(134,207,128,.14), transparent 70%), #030604; border: 1px solid var(--line-2); box-shadow: 0 40px 120px -30px rgba(60,190,90,.35); min-width: 0; }
+.hv-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.hv-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.hv-kpis .kpi { border: 0 !important; background: var(--card); }
+.section-h { text-align: center; max-width: 640px; margin: 0 auto 36px; }
+.section-h h2 { font: 800 clamp(28px, 3.6vw, 40px)/1.1 var(--f); letter-spacing: -.035em; margin: 0 0 10px; text-wrap: balance; }
+.section-h p { color: var(--muted); margin: 0; }
+.features { padding-block: 40px 56px; }
+.fgrid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
+.fcard { padding: 22px; border-radius: var(--r); background: linear-gradient(165deg, var(--card-2), var(--card)); border: 1px solid var(--line); display: grid; gap: 14px; align-content: start; }
+.fcard h3 { margin: 0; font-size: 17px; font-weight: 700; }
+.fcard p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.how { padding-block: 32px 72px; }
+.steps { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; counter-reset: st; }
+.step { padding: 24px; border-radius: var(--r); border: 1px solid var(--line); background: var(--card); }
+.step::before { counter-increment: st; content: counter(st); display: grid; place-items: center; width: 38px; height: 38px; border-radius: 12px; background: var(--green); color: var(--on-green); font-weight: 800; margin-bottom: 16px; box-shadow: 0 0 20px rgba(134,207,128,.3); }
+.step h3 { margin: 0 0 6px; font-size: 17px; }
+.step p { margin: 0; color: var(--muted); font-size: 14.5px; }
+.cta { margin: 0 auto 64px; padding: 40px; border-radius: var(--r-lg); background: radial-gradient(80% 140% at 0% 0%, rgba(134,207,128,.2), transparent 60%), #030604; border: 1px solid var(--line-2); display: flex; gap: 24px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+.cta h2 { margin: 0 0 6px; font: 800 clamp(24px, 3vw, 32px)/1.15 var(--f); letter-spacing: -.03em; }
+.cta p { margin: 0; color: var(--muted); }
+.lfoot { color: var(--faint); font-size: 13px; padding-block: 0 36px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* ================= APP ================= */
+.app { position: relative; z-index: 1; max-width: 1600px; margin: 20px auto; padding-left: max(20px, env(safe-area-inset-left, 0px)); padding-right: max(20px, env(safe-area-inset-right, 0px)); }
+.frame { display: grid; grid-template-columns: 228px minmax(0, 1fr); background: var(--shell); border-radius: 32px; border: 1px solid var(--line); }
+.side { position: sticky; top: calc(20px + env(safe-area-inset-top, 0px)); align-self: start; height: calc(100dvh - 40px - env(safe-area-inset-top, 0px)); padding: 28px 20px 22px; display: flex; flex-direction: column; gap: 4px; overflow: auto; }
+.side .brand { margin: 0 8px 28px; }
+.side .grp { font-size: 12px; color: var(--faint); margin: 16px 10px 8px; font-weight: 500; }
+.nav { display: flex; align-items: center; gap: 12px; width: 100%; height: 44px; padding: 0 14px; border-radius: 12px; border: 0; background: none; color: var(--fg); text-align: left; cursor: pointer; font-size: 14.5px; font-weight: 500; flex: none; }
+.nav:hover { background: rgba(134,207,128,.06); }
+.nav.active { background: var(--green); color: var(--on-green); font-weight: 700; box-shadow: 0 0 22px rgba(134,207,128,.25); }
+.nav .dotr { margin-left: auto; width: 8px; height: 8px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 10px var(--neon); }
+.side-foot { margin-top: auto; padding: 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); font-size: 12.5px; color: var(--muted); }
+.side-foot b { display: block; color: var(--fg); font-size: 13.5px; margin-bottom: 2px; }
+
+.main { min-width: 0; padding: 14px 14px 14px 0; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+.topbar { display: flex; align-items: center; gap: 12px; padding: 6px 8px 14px 18px; }
+.topbar .brand { display: none; }
+.tsearch { display: flex; align-items: center; gap: 8px; margin-left: auto; height: 48px; padding: 0 6px 0 14px; border-radius: 999px; background: #000; border: 1px solid var(--line-2); width: min(380px, 100%); min-width: 0; }
+.tsearch:focus-within { border-color: var(--green); box-shadow: 0 0 20px rgba(134,207,128,.15); }
+.tsearch .ico { color: var(--muted); }
+.tsearch input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; height: 100%; font-size: 15px; }
+.tsearch input::placeholder { color: var(--faint); }
+.tsearch button { width: 36px; height: 36px; border-radius: 50%; border: 0; background: var(--green); display: grid; place-items: center; cursor: pointer; flex: none; }
+.tsearch button svg { width: 16px; height: 16px; stroke: var(--on-green); fill: none; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.coach-btn { position: relative; flex: none; }
+.coach-btn .pip { position: absolute; top: -3px; right: -3px; width: 12px; height: 12px; border-radius: 50%; background: var(--neon); border: 2px solid var(--shell); box-shadow: 0 0 10px var(--neon); }
+
+.panel { position: relative; border-radius: var(--r-lg); padding: 28px; min-width: 0; border: 1px solid var(--line);
+  background: radial-gradient(60% 35% at 0% 0%, rgba(134,207,128,.12), transparent 70%), radial-gradient(50% 30% at 100% 100%, rgba(80,190,90,.08), transparent 70%), var(--panel); }
+
+/* Profile band */
+.profile { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px 28px; align-items: end; padding-bottom: 22px; scroll-margin-top: 24px; }
+.who { display: flex; gap: 16px; align-items: center; min-width: 0; }
+.avatar { width: 72px; height: 72px; border-radius: 22px; background: var(--green); color: var(--on-green); display: grid; place-items: center; font-weight: 800; font-size: 28px; overflow: hidden; flex: none; position: relative; box-shadow: 0 0 30px rgba(134,207,128,.3); }
+.avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.who h1 { margin: 0; font: 800 clamp(24px, 3vw, 34px)/1.1 var(--f); letter-spacing: -.03em; overflow-wrap: anywhere; }
+.handle { color: var(--muted); font-size: 14px; display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.handle a { text-decoration: none; color: var(--green); font-weight: 600; }
+.level { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; padding: 4px 12px; border-radius: 999px; background: var(--green); color: var(--on-green); margin-top: 10px; }
+.solved-big { text-align: right; }
+.solved-big .n { font: 700 clamp(50px, 6vw, 72px)/.92 var(--f-mono); letter-spacing: -.05em; color: var(--green); text-shadow: 0 0 40px rgba(134,207,128,.35); }
+.solved-big .of { color: var(--muted); font-size: 14px; margin-top: 6px; }
+.mixbar { display: flex; height: 8px; border-radius: 99px; overflow: hidden; background: var(--track); margin-top: 12px; width: 260px; margin-left: auto; gap: 2px; }
+.mixbar i { display: block; height: 100%; }
+.mixlegend { display: flex; gap: 14px; justify-content: flex-end; font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); border-radius: var(--r); background: linear-gradient(165deg, var(--card-2), var(--card)); border: 1px solid var(--line); overflow: hidden; }
+.kpi { padding: 16px 18px; border-left: 1px solid var(--line); min-width: 0; }
+.kpi:first-child { border-left: 0; }
+.kpi .v { font: 700 27px/1.1 var(--f-mono); letter-spacing: -.04em; margin-top: 8px; }
+.kpi .v small { font-size: 14px; color: var(--muted); font-weight: 500; letter-spacing: 0; }
+.kpi .v.hl { color: var(--green); }
+.kpi .s { font-size: 12.5px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Layout */
+.layout { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; margin-top: 18px; align-items: start; }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; min-width: 0; }
+.span2 { grid-column: 1 / -1; }
+[id^="sec-"] { scroll-margin-top: 24px; }
+
+/* Difficulty */
+.diff { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 20px; align-items: center; }
+.ring { width: 160px; height: 160px; }
+.ring text { fill: var(--fg); }
+.ring .arc { filter: drop-shadow(0 0 4px var(--g)); }
+.drows { display: grid; gap: 14px; }
+.drow-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.drow-top b { font-weight: 700; }
+.drow-top .mono { color: var(--muted); font-size: 12.5px; white-space: nowrap; }
+.dcard { container-type: inline-size; }
+@container (max-width: 430px) { .diff { grid-template-columns: 112px minmax(0, 1fr); gap: 14px; } .diff .ring { width: 112px; height: 112px; } }
+@container (max-width: 280px) { .diff { grid-template-columns: minmax(0, 1fr); justify-items: center; } .diff .ring { width: 150px; height: 150px; } }
+.drows { width: 100%; }
+.track { height: 7px; border-radius: 99px; background: var(--track); overflow: hidden; margin-top: 6px; }
+.track i { display: block; height: 100%; border-radius: 99px; }
+.beats { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.beats b { color: var(--fg); font-weight: 600; }
+
+/* Languages */
+.langs { display: grid; gap: 13px; }
+.lang-top { display: flex; justify-content: space-between; font-size: 14px; }
+.lang-top .mono { color: var(--muted); font-size: 13px; }
+
+/* Heatmap */
+.heat-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #1d2a21 transparent; padding-bottom: 6px; }
+.heat-scroll svg { display: block; }
+.heat-scroll text { fill: var(--muted); font-family: var(--f); font-size: 10.5px; }
+.heat-scroll rect[data-d] { cursor: pointer; }
+.heat-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+.legend { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 12.5px; }
+.legend i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.readout { font-family: var(--f-mono); font-size: 12.5px; color: var(--muted); min-height: 1.4em; }
+.readout b { color: var(--fg); font-weight: 500; }
+
+/* Insights */
+.insights { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ins { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 12px; padding: 12px 14px; border-radius: 12px; background: #000; border: 1px solid var(--line-n); }
+.ins .pill { grid-row: span 2; align-self: start; }
+.ins b { font-weight: 600; font-size: 14.5px; }
+.ins span { color: var(--muted); font-size: 13.5px; }
+.pill { font-size: 10.5px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+.pill.good { color: var(--good); background: rgba(155,227,90,.12); }
+.pill.warn { color: var(--warn); background: rgba(234,227,58,.12); }
+.pill.bad { color: var(--bad); background: rgba(242,68,91,.13); }
+.pill.info { color: var(--green); background: rgba(134,207,128,.12); }
+
+/* Topics */
+.topics-split { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 26px; }
+.core { display: grid; gap: 9px; }
+.core-row { display: grid; grid-template-columns: minmax(0, 150px) minmax(0, 1fr) 52px; gap: 10px; align-items: center; font-size: 13.5px; }
+.core-row .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.core-row .mono { text-align: right; font-size: 12.5px; color: var(--muted); }
+.core-row .track { margin: 0; }
+.core-legend { display: flex; gap: 14px; margin-top: 14px; font-size: 12px; color: var(--muted); flex-wrap: wrap; }
+.tagcloud { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag { display: inline-flex; gap: 7px; align-items: baseline; padding: 6px 11px; border-radius: 9px; background: #000; border: 1px solid var(--line-n); font-size: 13px; text-decoration: none; }
+.tag:hover { border-color: var(--green); }
+.tag .mono { font-size: 12px; color: var(--green); font-weight: 700; }
+.sub-h { margin: 0 0 12px; }
+
+/* Rhythm */
+.rhythm { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.5fr); gap: 26px; }
+.vbars { display: flex; align-items: flex-end; gap: 6px; height: 128px; }
+.vbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; min-width: 0; }
+.vbar i { display: block; width: 100%; max-width: 30px; border-radius: 6px 6px 2px 2px; background: #1E4A2A; min-height: 3px; }
+.vbar.top i { background: linear-gradient(180deg, var(--neon), var(--green)); box-shadow: 0 0 16px rgba(155,227,90,.4); }
+.vbar span { font-size: 11px; color: var(--muted); white-space: nowrap; }
+.vbar.top span { color: var(--green); font-weight: 700; }
+
+/* Contest */
+.cstats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
+.cstats div { padding: 12px 14px; border-radius: 12px; background: #000; border: 1px solid var(--line-n); }
+.cstats b { display: block; font: 700 19px var(--f-mono); margin-top: 4px; }
+.chart-wrap { width: 100%; min-width: 0; }
+.chart-wrap svg { display: block; overflow: visible; }
+.chart-wrap text { fill: var(--muted); font-family: var(--f); font-size: 11.5px; }
+
+/* Recent + badges */
+.recent { list-style: none; margin: 0; padding: 0; }
+.recent li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 10px; align-items: center; padding: 11px 0; border-top: 1px solid var(--line-n); font-size: 14px; }
+.recent li:first-child { border-top: 0; padding-top: 0; }
+.recent a { text-decoration: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.recent a:hover { color: var(--green); }
+.lang { font: 500 11.5px var(--f-mono); padding: 3px 7px; border-radius: 6px; background: #000; border: 1px solid var(--line-n); color: var(--muted); }
+.ago { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.more { margin-top: 12px; }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 14px; }
+.bdg { text-align: center; font-size: 12px; color: var(--muted); }
+.bdg .bi { width: 58px; height: 58px; margin: 0 auto 8px; border-radius: 50%; display: grid; place-items: center; background: radial-gradient(circle at 30% 30%, #1d4a28, #08180D); border: 1px solid var(--line-2); position: relative; overflow: hidden; color: var(--green); font-weight: 800; font-size: 18px; }
+.bdg .bi img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.pfoot { color: var(--faint); font-size: 12.5px; padding: 18px 2px 0; }
+
+/* Teaser (shown when the coach isn't a visible rail) */
+.teaser { display: none; grid-template-columns: auto minmax(0, 1fr); gap: 12px 16px; align-items: center; background: radial-gradient(80% 140% at 0% 0%, rgba(134,207,128,.18), transparent 60%), var(--card); border-color: var(--line-2); }
+.teaser .icon-circle { background: var(--green); border: 0; }
+.teaser .icon-circle svg { stroke: var(--on-green); }
+.teaser p { margin: 2px 0 0; font-size: 15.5px; font-weight: 600; line-height: 1.4; }
+.teaser .btn { grid-column: 1 / -1; justify-self: start; }
+
+/* Coach rail */
+.coach { position: sticky; top: calc(20px + env(safe-area-inset-top, 0px)); max-height: calc(100dvh - 40px - env(safe-area-inset-top, 0px)); display: flex; flex-direction: column; border-radius: var(--r); background: linear-gradient(180deg, #07100A, #040805); border: 1px solid var(--line-2); box-shadow: 0 0 60px -20px rgba(134,207,128,.25); overflow: hidden; }
+.coach-h { display: flex; align-items: center; gap: 12px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+.coach-h .icon-circle { width: 40px; height: 40px; background: var(--green); border: 0; box-shadow: 0 0 20px rgba(134,207,128,.4); }
+.coach-h .icon-circle svg { stroke: var(--on-green); width: 19px; height: 19px; }
+.coach-h h3 { margin: 0; font-size: 16.5px; }
+.coach-h small { color: var(--muted); font-size: 12px; }
+.coach-h .acts { margin-left: auto; display: flex; gap: 8px; }
+.ibtn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line-2); background: #000; display: grid; place-items: center; cursor: pointer; color: var(--fg); }
+.ibtn:hover { border-color: var(--green); }
+.ibtn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.coach-close { display: none; }
+.coach-scroll { flex: 1; overflow: auto; overscroll-behavior: contain; min-height: 0; }
+.coach-body { padding: 18px; display: grid; gap: 18px; }
+.c-head { margin: 6px 0 0; font-size: 17px; font-weight: 700; line-height: 1.4; text-wrap: pretty; }
+.pts { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.pts li { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 9px; font-size: 14px; }
+.pts li::before { content: ""; width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: var(--c); box-shadow: 0 0 8px var(--c); }
+.plan { counter-reset: s; display: grid; gap: 11px; margin-top: 10px; }
+.pstep { display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 11px; font-size: 14px; }
+.pstep::before { counter-increment: s; content: counter(s); width: 26px; height: 26px; border-radius: 8px; background: var(--green); color: var(--on-green); display: grid; place-items: center; font: 800 12px var(--f-mono); }
+.pstep b { display: block; font-weight: 600; }
+.pstep span { color: var(--muted); }
+.probs { display: grid; gap: 8px; margin-top: 10px; }
+.prob { display: block; text-decoration: none; padding: 11px 13px; border-radius: 12px; background: #000; border: 1px solid var(--line-n); }
+.prob:hover { border-color: var(--green); }
+.prob-top { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }
+.prob-top b { font-weight: 600; font-size: 14px; }
+.prob small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+.dtag { font: 700 11.5px var(--f-mono); white-space: nowrap; }
+.target { padding: 13px 15px; border-radius: 12px; background: var(--green); color: var(--on-green); font-size: 14px; font-weight: 600; box-shadow: 0 0 30px -6px rgba(134,207,128,.5); }
+.target small { display: block; font-size: 11px; letter-spacing: .09em; text-transform: uppercase; font-weight: 800; opacity: .7; margin-bottom: 2px; }
+.cstate { display: grid; gap: 12px; color: var(--muted); font-size: 14px; }
+.cstate .err { color: var(--bad); }
+.sk { background: linear-gradient(90deg, rgba(134,207,128,.05), rgba(134,207,128,.12), rgba(134,207,128,.05)); background-size: 200% 100%; animation: sh 1.4s infinite linear; border-radius: 10px; }
+@keyframes sh { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.chat { border-top: 1px solid var(--line); padding: 14px 18px calc(16px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 10px; }
+.msgs { display: grid; gap: 10px; }
+.msgs:empty { display: none; }
+.msg { font-size: 14px; padding: 10px 13px; border-radius: 14px; max-width: 92%; overflow-wrap: anywhere; }
+.msg.user { justify-self: end; background: var(--green); color: var(--on-green); border-bottom-right-radius: 4px; font-weight: 500; }
+.msg.model { background: #000; border: 1px solid var(--line-n); border-bottom-left-radius: 4px; }
+.msg p { margin: 0 0 6px; } .msg p:last-child { margin: 0; } .msg ul { margin: 4px 0; padding-left: 18px; }
+.suggest { display: flex; gap: 6px; flex-wrap: wrap; }
+.suggest button { border: 1px solid var(--line-2); background: #000; border-radius: 999px; padding: 5px 11px; font-size: 12.5px; cursor: pointer; }
+.suggest button:hover { border-color: var(--green); color: var(--green-hi); }
+.ask { display: flex; gap: 8px; align-items: center; padding: 4px 4px 4px 12px; border-radius: 12px; background: #000; border: 1px solid var(--line-2); }
+.ask:focus-within { border-color: var(--green); }
+.ask input { flex: 1; min-width: 0; height: 40px; border: 0; outline: 0; background: none; font-size: 16px; }
+.ask .btn { height: 38px; width: 38px; padding: 0; border-radius: 9px; }
+.typing { display: inline-flex; gap: 4px; }
+.typing i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: bl 1.2s infinite; }
+.typing i:nth-child(2) { animation-delay: .2s; } .typing i:nth-child(3) { animation-delay: .4s; }
+@keyframes bl { 0%, 80%, 100% { opacity: .25; } 40% { opacity: 1; } }
+.scrim { position: fixed; inset: 0; background: var(--scrim); z-index: 60; }
+.tabbar { display: none; }
+.toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 90; background: var(--green); color: var(--on-green); padding: 11px 18px; border-radius: 12px; font-size: 14px; font-weight: 600; max-width: calc(100% - 32px); box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.banner { position: relative; z-index: 2; background: var(--green); color: var(--on-green); font-size: 13.5px; text-align: center; padding: 8px 16px; font-weight: 700; }
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1320px) {
+  .layout { grid-template-columns: minmax(0, 1fr); }
+  .teaser { display: grid; }
+  .coach { position: fixed; z-index: 70; top: 0; right: 0; bottom: 0; width: min(440px, 100%); max-height: none; border-radius: 0; border-width: 0 0 0 1px; transform: translateX(105%); visibility: hidden; transition: transform .3s cubic-bezier(.2,.8,.2,1), visibility .3s; padding-top: env(safe-area-inset-top, 0px); padding-right: env(safe-area-inset-right, 0px); background: #040805; }
+  .coach.open { transform: none; visibility: visible; }
+  .coach-close { display: grid; }
+}
+@media (max-width: 1180px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi:nth-child(4) { border-left: 0; }
+  .kpi:nth-child(n+4) { border-top: 1px solid var(--line); }
+  .fgrid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero { grid-template-columns: minmax(0, 1fr); }
+  .hero-visual { max-width: 640px; }
+}
+@media (max-width: 1024px) {
+  .app { margin: 0; padding: 0; }
+  .frame { grid-template-columns: minmax(0, 1fr); border-radius: 0; border: 0; background: transparent; }
+  .side { display: none; }
+  .main { padding: 0; }
+  .topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 40; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); background: rgba(0,0,0,.88); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--line); }
+  .topbar .brand { display: inline-flex; font-size: 19px; }
+  .topbar .brand svg { width: 28px; height: 28px; }
+  .tsearch { height: 44px; }
+  .panel { border-radius: 0; border: 0; padding: 22px max(16px, env(safe-area-inset-right, 0px)) calc(96px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); }
+  .tabbar { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); position: fixed; left: 0; right: 0; bottom: 0; z-index: 45; padding: 8px max(8px, env(safe-area-inset-right, 0px)) calc(8px + env(safe-area-inset-bottom, 0px)) max(8px, env(safe-area-inset-left, 0px)); background: rgba(0,0,0,.94); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--line); }
+  .tab { display: grid; justify-items: center; gap: 3px; padding: 6px 2px; border: 0; background: none; color: var(--muted); font-size: 11px; font-weight: 600; cursor: pointer; position: relative; }
+  .tab .ico { width: 22px; height: 22px; }
+  .tab.active { color: var(--green); }
+  .tab.active::before { content: ""; position: absolute; top: -9px; width: 26px; height: 3px; border-radius: 0 0 3px 3px; background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .tab .pip { position: absolute; top: 4px; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: var(--neon); box-shadow: 0 0 8px var(--neon); }
+  .coach { top: auto; left: 0; width: 100%; max-height: 90dvh; border-width: 1px 0 0; border-radius: 24px 24px 0 0; transform: translateY(105%); padding-top: 0; padding-left: env(safe-area-inset-left, 0px); }
+  .coach-h { position: relative; padding-top: 24px; }
+  .coach-h::before { content: ""; position: absolute; top: 9px; left: 50%; width: 40px; height: 4px; margin-left: -20px; border-radius: 4px; background: var(--line-2); }
+}
+@media (max-width: 760px) {
+  body { font-size: 14.5px; }
+  .lnav { display: none; }
+  .lhead .btn { margin-left: auto; }
+  .hero { gap: 36px; padding-top: 24px; padding-bottom: 48px; }
+  .hero .lede { font-size: 16px; }
+  .hsearch { flex-wrap: wrap; padding: 6px; }
+  .hsearch .ico { display: none; }
+  .hsearch input { padding: 0 10px; flex-basis: 100%; }
+  .hsearch .btn { width: 100%; }
+  .hero-facts { gap: 20px; }
+  .hero-facts b { font-size: 22px; }
+  .hero-visual { padding: 12px; gap: 12px; border-radius: 22px; }
+  .hv-row { grid-template-columns: minmax(0, 1fr); }
+  .hv-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .fgrid, .steps { grid-template-columns: minmax(0, 1fr); }
+  .cta { padding: 26px; }
+  .cta .btn { width: 100%; }
+  .topbar .brand span { display: none; }
+  .topbar { gap: 10px; }
+  .tsearch { width: auto; flex: 1; }
+  .coach-btn .lbl { display: none; }
+  .coach-btn { width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+  .profile { grid-template-columns: minmax(0, 1fr); padding-bottom: 18px; }
+  .avatar { width: 60px; height: 60px; border-radius: 18px; font-size: 24px; }
+  .solved-big { text-align: left; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; align-items: end; }
+  .solved-big .n { grid-row: span 2; }
+  .solved-big .of { margin: 0; }
+  .mixbar { margin: 0; width: 100%; }
+  .mixlegend { grid-column: 1 / -1; justify-content: flex-start; }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi { padding: 14px; }
+  .kpi:nth-child(n) { border-left: 1px solid var(--line); border-top: 1px solid var(--line); }
+  .kpi:nth-child(odd) { border-left: 0; }
+  .kpi:nth-child(-n+2) { border-top: 0; }
+  .kpi .v { font-size: 23px; }
+  .grid { grid-template-columns: minmax(0, 1fr); gap: 14px; }
+  .layout { margin-top: 14px; }
+  .card { padding: 16px; }
+  .diff { grid-template-columns: minmax(0, 1fr); justify-items: center; }
+  .drows { width: 100%; }
+  .insights, .topics-split, .rhythm { grid-template-columns: minmax(0, 1fr); }
+  .cstats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .core-row { grid-template-columns: minmax(0, 118px) minmax(0, 1fr) 48px; }
+  .teaser .btn { width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="glow" aria-hidden="true"></div>
+<div class="banner" id="banner" hidden>Preview with sample data. Deploy the project to analyze real profiles with a live Gemini coach.</div>
+
+<!-- ================= LANDING ================= -->
+<div class="landing" id="landing">
+  <header class="wrap lhead">
+    <button class="brand" type="button" data-home aria-label="LeetLens home">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#86CF80"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#06140A" stroke-width="3" stroke-dasharray="40 60" stroke-linecap="round" transform="rotate(130 16 16)"/><circle cx="16" cy="16" r="2.6" fill="#06140A"/></svg>
+      <span>Leet<b>Lens</b></span>
+    </button>
+    <nav class="lnav" aria-label="Page sections"><a href="#features">What you get</a><a href="#how">How it works</a></nav>
+    <button class="btn btn-dark btn-sm" type="button" data-sample="1">See a sample</button>
+  </header>
+
+  <section class="wrap hero">
+    <div>
+      <span class="chip"><i></i>Personal AI coach, powered by Gemini</span>
+      <h1>See your LeetCode profile the way a <span>coach</span> does.</h1>
+      <p class="lede">Paste a username or profile link. You get your difficulty mix, the interview topics you are missing, how consistent your practice really is, and a plan for the next two weeks.</p>
+      <form class="hsearch" id="heroSearch" autocomplete="off">
+        <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+        <label class="sr" for="heroQ">LeetCode username or profile link</label>
+        <input id="heroQ" name="heroQ" placeholder="Pritam_roy1305 or leetcode.com/u/…" enterkeyhint="search" autocapitalize="off" spellcheck="false">
+        <button class="btn" type="submit">Analyze profile<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+      <div class="form-error" id="heroErr" role="alert"></div>
+      <div class="quick"><span>Try</span>
+        <button class="qbtn" type="button" data-user="Pritam_roy1305">Pritam_roy1305</button>
+        <button class="qbtn" type="button" data-sample="1">Sample profile</button>
+      </div>
+      <div class="hero-facts">
+        <div><b class="num">19</b><span>interview topics tracked</span></div>
+        <div><b class="num">365</b><span>days of activity read</span></div>
+        <div><b class="num">6</b><span>next problems picked for you</span></div>
+      </div>
+    </div>
+    <div class="hero-visual" id="heroVisual" aria-hidden="true"></div>
+  </section>
+
+  <section class="wrap features" id="features">
+    <div class="section-h"><h2>Everything a profile page doesn't tell you</h2><p>LeetCode shows totals. LeetLens shows what those totals mean for your next interview.</p></div>
+    <div class="fgrid">
+      <div class="fcard"><div class="icon-circle"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9h-9z"/></svg></div><h3>Difficulty and accuracy</h3><p>Easy, Medium and Hard against the full problem set, your acceptance rate and how you rank.</p></div>
+      <div class="fcard"><div class="icon-circle"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Topic coverage</h3><p>DP, graphs, trees and 16 more core interview topics measured against a realistic target.</p></div>
+      <div class="fcard"><div class="icon-circle"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 10h18M8 2v4M16 2v4"/></svg></div><h3>Consistency</h3><p>A full-year heatmap, streaks, your best days of the week and whether momentum is up or down.</p></div>
+      <div class="fcard"><div class="icon-circle"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></div><h3>An AI coach</h3><p>A plain-spoken diagnosis, a two-week plan, six problems to solve next, and answers to your questions.</p></div>
+    </div>
+  </section>
+
+  <section class="wrap how" id="how">
+    <div class="section-h"><h2>Three steps, under a minute</h2></div>
+    <div class="steps">
+      <div class="step"><h3>Paste your username</h3><p>Or the full profile link. Any public LeetCode account works, no sign-in needed.</p></div>
+      <div class="step"><h3>Read the dashboard</h3><p>Every number pulled live from LeetCode and turned into clear signals.</p></div>
+      <div class="step"><h3>Follow the plan</h3><p>The coach tells you exactly what to solve this week, and why.</p></div>
+    </div>
+  </section>
+
+  <div class="wrap"><div class="cta"><div><h2>Find out where your prep really stands.</h2><p>Free, no account, works on your phone.</p></div><button class="btn" type="button" data-focus-search>Analyze my profile</button></div></div>
+  <footer class="wrap lfoot"><span>LeetLens · Not affiliated with LeetCode.</span><span>Data comes from LeetCode's public profile pages.</span></footer>
+</div>
+
+<!-- ================= APP ================= -->
+<div class="app" id="app" hidden>
+  <div class="frame">
+    <aside class="side" aria-label="Main navigation">
+      <button class="brand" type="button" data-home aria-label="LeetLens home">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#86CF80"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#06140A" stroke-width="3" stroke-dasharray="40 60" stroke-linecap="round" transform="rotate(130 16 16)"/><circle cx="16" cy="16" r="2.6" fill="#06140A"/></svg>
+        <span>Leet<b>Lens</b></span>
+      </button>
+      <div class="grp">Profile</div>
+      <button class="nav" type="button" data-go="sec-overview"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</button>
+      <button class="nav" type="button" data-go="sec-activity"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Activity</button>
+      <button class="nav" type="button" data-go="sec-topics"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Topic coverage</button>
+      <button class="nav" type="button" data-go="sec-contest"><svg class="ico" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/><path d="M17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3"/></svg>Contests</button>
+      <button class="nav" type="button" data-go="sec-recent"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Recent solves</button>
+      <div class="grp">Coach</div>
+      <button class="nav" type="button" data-open-coach><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg>AI Coach<i class="dotr" id="navPip" hidden></i></button>
+      <div class="grp">Explore</div>
+      <button class="nav" type="button" data-home><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>New search</button>
+      <button class="nav" type="button" data-sample="1"><svg class="ico" viewBox="0 0 24 24"><path d="M4 4h16v16H4z"/><path d="M4 9h16M9 20V9"/></svg>Sample profile</button>
+      <div class="side-foot"><b>Live from LeetCode</b>Public profile data, refreshed every 10 minutes.</div>
+    </aside>
+
+    <div class="main">
+      <header class="topbar">
+        <button class="brand" type="button" data-home aria-label="LeetLens home">
+          <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="9" fill="#86CF80"/><circle cx="16" cy="16" r="8.5" fill="none" stroke="#06140A" stroke-width="3" stroke-dasharray="40 60" stroke-linecap="round" transform="rotate(130 16 16)"/><circle cx="16" cy="16" r="2.6" fill="#06140A"/></svg>
+          <span>Leet<b>Lens</b></span>
+        </button>
+        <form class="tsearch" id="topSearch" autocomplete="off">
+          <svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+          <label class="sr" for="q">LeetCode username or profile link</label>
+          <input id="q" name="q" placeholder="Look up another profile" enterkeyhint="search" autocapitalize="off" spellcheck="false">
+          <button type="submit" aria-label="Analyze"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        </form>
+        <button class="btn coach-btn" type="button" data-open-coach aria-label="Open AI coach"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg><span class="lbl">AI Coach</span><i class="pip" id="btnPip" hidden></i></button>
+      </header>
+
+      <main class="panel">
+        <div class="profile" id="sec-overview"></div>
+        <div class="kpis" id="kpis"></div>
+        <div class="layout">
+          <div class="grid" id="grid"></div>
+          <aside class="coach" id="coach" aria-label="AI coach">
+            <div class="coach-h">
+              <div class="icon-circle"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg></div>
+              <div><h3>AI Coach</h3><small id="coachFor">Personal plan, powered by Gemini</small></div>
+              <div class="acts">
+                <button class="ibtn" id="regen" type="button" title="Regenerate advice" aria-label="Regenerate advice"><svg viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></svg></button>
+                <button class="ibtn coach-close" id="closeCoach" type="button" aria-label="Close coach"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+              </div>
+            </div>
+            <div class="coach-scroll"><div class="coach-body" id="coachBody"></div></div>
+            <div class="chat" id="chat" hidden>
+              <div class="msgs" id="msgs" aria-live="polite"></div>
+              <div class="suggest" id="suggest">
+                <button type="button">Make me a 4-week plan</button>
+                <button type="button">Which DP problems next?</button>
+                <button type="button">How do I get better at contests?</button>
+              </div>
+              <form class="ask" id="askForm" autocomplete="off">
+                <label class="sr" for="askQ">Ask the coach</label>
+                <input id="askQ" maxlength="400" placeholder="Ask about your prep…" enterkeyhint="send">
+                <button class="btn" type="submit" aria-label="Send"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+              </form>
+            </div>
+          </aside>
+        </div>
+        <div class="pfoot" id="foot"></div>
+      </main>
+    </div>
+  </div>
+
+  <nav class="tabbar" aria-label="Sections">
+    <button class="tab" type="button" data-go="sec-overview"><svg class="ico" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Overview</button>
+    <button class="tab" type="button" data-go="sec-activity"><svg class="ico" viewBox="0 0 24 24"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>Activity</button>
+    <button class="tab" type="button" data-go="sec-topics"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>Topics</button>
+    <button class="tab" type="button" data-go="sec-contest"><svg class="ico" viewBox="0 0 24 24"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0z"/></svg>Contests</button>
+    <button class="tab" type="button" data-open-coach><svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg>Coach<i class="pip" id="tabPip" hidden></i></button>
+  </nav>
+  <div class="scrim" id="scrim" hidden></div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(() => {
+'use strict';
+const STATIC = !!window.LEETLENS_STATIC;
+const $ = (s, el = document) => el.querySelector(s);
+const $$ = (s, el = document) => [...el.querySelectorAll(s)];
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n) => (n == null || Number.isNaN(n) ? '–' : Number(n).toLocaleString());
+const pct = (a, b) => (b ? (a / b) * 100 : 0);
+const DAY = 86400;
+const LC = 'https://leetcode.com';
+const COLORS = { easy: '#57D6A6', medium: '#F2C744', hard: '#F2566B' };
+
+const CORE_TOPICS = [
+  ['Array', 40], ['String', 25], ['Hash Table', 25], ['Two Pointers', 15],
+  ['Sliding Window', 10], ['Binary Search', 15], ['Stack', 12], ['Linked List', 10],
+  ['Tree', 25], ['Depth-First Search', 20], ['Breadth-First Search', 15], ['Graph', 15],
+  ['Heap (Priority Queue)', 10], ['Backtracking', 10], ['Dynamic Programming', 40],
+  ['Greedy', 15], ['Trie', 5], ['Union Find', 5], ['Bit Manipulation', 8],
+];
+
+const state = { data: null, ins: null, coach: null, chat: [], token: 0, chatBusy: false };
+const store = {
+  get(k) { try { return JSON.parse(sessionStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { sessionStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } },
+};
+
+function parseUsername(input) {
+  const s = String(input || '').trim();
+  const m = s.match(/leetcode\.(?:com|cn)\/(?:u\/)?([A-Za-z0-9_.-]+)/i);
+  const name = (m ? m[1] : s).replace(/^@/, '').replace(/\/+$/, '');
+  return /^[A-Za-z0-9_.-]{1,40}$/.test(name) ? name : null;
+}
+
+/* ---------- Insights ---------- */
+function computeInsights(d) {
+  const now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000;
+  const byDay = new Map();
+  for (const [ts, c] of Object.entries(d.calendar?.map || {})) {
+    const day = Math.floor(Number(ts) / DAY) * DAY;
+    byDay.set(day, (byDay.get(day) || 0) + Number(c));
+  }
+  const count = (day) => byDay.get(day) || 0;
+  const win = (from, to) => { let subs = 0, days = 0; for (let x = today - from * DAY; x > today - to * DAY; x -= DAY) { const c = count(x); subs += c; if (c) days++; } return { subs, days }; };
+  const year = win(0, 365), last30 = win(0, 30), prev30 = win(30, 60);
+  let cur = 0; let x = count(today) ? today : today - DAY;
+  while (count(x)) { cur++; x -= DAY; }
+  let best = 0, run = 0;
+  for (let y = today - 364 * DAY; y <= today; y += DAY) { if (count(y)) { run++; best = Math.max(best, run); } else run = 0; }
+  if (d.calendar?.streak) best = Math.max(best, d.calendar.streak);
+
+  const weekday = Array(7).fill(0);
+  const months = [];
+  for (let i = 11; i >= 0; i--) {
+    const dt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    months.push({ key: `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`, label: dt.toLocaleString(undefined, { month: 'short', timeZone: 'UTC' }), year: dt.getUTCFullYear(), subs: 0 });
+  }
+  const mIndex = Object.fromEntries(months.map((m, i) => [m.key, i]));
+  for (let y = today - 364 * DAY; y <= today; y += DAY) {
+    const c = count(y); if (!c) continue;
+    const dt = new Date(y * 1000);
+    weekday[dt.getUTCDay()] += c;
+    const k = `${dt.getUTCFullYear()}-${dt.getUTCMonth()}`;
+    if (k in mIndex) months[mIndex[k]].subs += c;
+  }
+
+  const s = d.solved;
+  const share = { easy: pct(s.easy, s.all), medium: pct(s.medium, s.all), hard: pct(s.hard, s.all) };
+  const acc = d.submissions?.total ? pct(d.submissions.accepted, d.submissions.total) : null;
+  const tags = d.tags ? [...d.tags.fundamental, ...d.tags.intermediate, ...d.tags.advanced] : [];
+  const tagCount = Object.fromEntries(tags.map((t) => [t.name, t.solved]));
+  const core = CORE_TOPICS.map(([name, target]) => ({ name, target, solved: tagCount[name] || 0, ratio: Math.min(1, (tagCount[name] || 0) / target) }));
+  const topTags = [...tags].sort((a, b) => b.solved - a.solved).slice(0, 14);
+
+  let level;
+  const rating = d.contest?.rating || 0;
+  if (s.all < 50) level = 'Getting started';
+  else if (s.all < 150) level = 'Building basics';
+  else if (s.all < 300) level = s.medium >= 120 ? 'Interview core' : 'Building basics';
+  else if (s.all < 600) level = s.hard >= 40 || rating >= 1800 ? 'Strong solver' : 'Interview core';
+  else level = rating >= 2000 ? 'Advanced competitor' : 'Advanced';
+
+  const out = [];
+  const weak = core.filter((c) => c.ratio < 0.5).sort((a, b) => a.ratio - b.ratio);
+  if (s.all >= 30) {
+    if (share.hard < 5 && s.all >= 120) out.push({ tone: 'warn', title: `Only ${share.hard.toFixed(0)}% of solves are Hard`, detail: 'Most product-company loops include at least one hard-leaning question. Mix in one Hard a week.' });
+    if (share.medium < 40) out.push({ tone: 'warn', title: 'The account leans on Easy problems', detail: `Medium is ${share.medium.toFixed(0)}% of solves. Interviews live at Medium, so push that above half.` });
+    else if (share.medium >= 50) out.push({ tone: 'good', title: `Medium makes up ${share.medium.toFixed(0)}% of solves`, detail: 'That is the right center of gravity for interviews.' });
+  }
+  if (acc != null && d.submissions.total >= 30) {
+    if (acc < 50) out.push({ tone: 'bad', title: `${acc.toFixed(0)}% of submissions get accepted`, detail: 'Lots of retries. Dry-run edge cases (empty input, duplicates, overflow) before hitting submit.' });
+    else if (acc >= 70) out.push({ tone: 'good', title: `${acc.toFixed(0)}% acceptance on submissions`, detail: 'Solutions are usually right the first time. Good sign for live interviews.' });
+  }
+  if (cur >= 7) out.push({ tone: 'good', title: `${cur}-day streak running`, detail: 'Consistency beats cramming. Protect it with one easy problem on busy days.' });
+  if (last30.days <= 4 && year.days > 20) out.push({ tone: 'bad', title: 'Momentum has dropped', detail: `Only ${last30.days} active days in the last 30, against ${prev30.days} the month before.` });
+  else if (last30.subs > prev30.subs * 1.25 && last30.subs >= 20) out.push({ tone: 'good', title: 'Practice is picking up', detail: `${last30.subs} submissions in the last 30 days, up from ${prev30.subs}.` });
+  if (weak.length && tags.length) out.push({ tone: 'warn', title: `Thin on ${weak.slice(0, 3).map((w) => w.name).join(', ')}`, detail: `${weak.length} of ${core.length} core interview topics are under half of target.` });
+  if (topTags[0]) out.push({ tone: 'info', title: `${topTags[0].name} is the strongest topic`, detail: `${topTags[0].solved} problems solved there.` });
+  if (!d.contest?.attended && s.all >= 120) out.push({ tone: 'info', title: 'No contests yet', detail: 'Weekly contests are the closest thing to interview pressure. Try one this weekend.' });
+  else if (d.contest?.history?.length >= 4) {
+    const h = d.contest.history.slice(-5);
+    const delta = h[h.length - 1].rating - h[0].rating;
+    out.push(delta >= 0
+      ? { tone: 'good', title: `Contest rating up ${delta} over the last ${h.length}`, detail: `Now at ${d.contest.rating ?? h[h.length - 1].rating}.` }
+      : { tone: 'warn', title: `Contest rating down ${-delta} over the last ${h.length}`, detail: 'Review the problems you missed after each contest before moving on.' });
+  }
+  const wdNames = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays'];
+  const topWd = weekday.indexOf(Math.max(...weekday));
+  if (year.subs > 30) out.push({ tone: 'info', title: `Most active on ${wdNames[topWd]}`, detail: `${Math.round(pct(weekday[topWd], year.subs))}% of the year's submissions land on that day.` });
+
+  return { today, byDay, year, last30, prev30, cur, best, weekday, months, share, acc, core, topTags, level, insights: out.slice(0, 8) };
+}
+
+/* ---------- Visual pieces ---------- */
+function ringSVG(d) {
+  const rows = [['easy', 72], ['medium', 58], ['hard', 44]];
+  const arcs = rows.map(([k, r]) => {
+    const c = 2 * Math.PI * r;
+    const p = Math.min(1, pct(d.solved[k], d.totals[k]) / 100);
+    return `<circle cx="80" cy="80" r="${r}" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="9"/>
+      <circle class="arc" style="--g:${COLORS[k]}" cx="80" cy="80" r="${r}" fill="none" stroke="${COLORS[k]}" stroke-width="9" stroke-linecap="round" stroke-dasharray="${Math.max(0.5, c * p).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 80 80)"/>`;
+  }).join('');
+  return `<svg class="ring" viewBox="0 0 160 160" role="img" aria-label="${d.solved.all} solved of ${d.totals.all}">${arcs}
+    <text x="80" y="83" text-anchor="middle" font-family="JetBrains Mono, monospace" font-weight="700" font-size="26">${d.solved.all}</text>
+    <text x="80" y="101" text-anchor="middle" font-size="11" style="fill:var(--muted)">solved</text></svg>`;
+}
+
+function heatSVG(ins, width = 0) {
+  const gap = 3, cell = Math.max(11, Math.min(16, Math.floor((width - 30) / 53) - gap)), step = cell + gap, left = 30, top = 18;
+  const todayDow = new Date(ins.today * 1000).getUTCDay();
+  const start = ins.today - (52 * 7 + todayDow) * DAY;
+  const lv = (c) => (c === 0 ? 0 : c < 3 ? 1 : c < 6 ? 2 : c < 10 ? 3 : 4);
+  let rects = '', months = '', lastM = -1;
+  for (let w = 0; w < 53; w++) for (let dow = 0; dow < 7; dow++) {
+    const day = start + (w * 7 + dow) * DAY;
+    if (day > ins.today) continue;
+    const c = ins.byDay.get(day) || 0;
+    rects += `<rect data-d="${day}" data-n="${c}" x="${left + w * step}" y="${top + dow * step}" width="${cell}" height="${cell}" rx="3" fill="var(--heat-${lv(c)})"/>`;
+    if (dow === 0) { const m = new Date(day * 1000).getUTCMonth(); if (m !== lastM && w < 51) { months += `<text x="${left + w * step}" y="11">${new Date(day * 1000).toLocaleString(undefined, { month: 'short', timeZone: 'UTC' })}</text>`; lastM = m; } }
+  }
+  const days = [[1, 'Mon'], [3, 'Wed'], [5, 'Fri']].map(([i, t]) => `<text x="0" y="${top + i * step + cell - 2}">${t}</text>`).join('');
+  const W = left + 53 * step, H = top + 7 * step;
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Submission heatmap for the past year">${months}${days}${rects}</svg>`;
+}
+
+function smoothPath(pts) {
+  if (pts.length < 2) return pts.length ? `M${pts[0][0]},${pts[0][1]}` : '';
+  let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[i - 1] || pts[i], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+    d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+function contestSVG(c, width) {
+  const hist = c.history;
+  const W = Math.max(260, width), H = 210, pl = 42, pr = 14, pt = 16, pb = 26;
+  const rs = hist.map((h) => h.rating);
+  let lo = Math.floor((Math.min(...rs) - 20) / 50) * 50, hi = Math.ceil((Math.max(...rs) + 20) / 50) * 50;
+  if (hi === lo) hi = lo + 50;
+  const X = (i) => pl + (hist.length === 1 ? (W - pl - pr) / 2 : (i * (W - pl - pr)) / (hist.length - 1));
+  const Y = (r) => pt + (1 - (r - lo) / (hi - lo)) * (H - pt - pb);
+  const stepV = Math.max(50, Math.ceil((hi - lo) / 4 / 50) * 50);
+  let grid = '';
+  for (let v = lo; v <= hi; v += stepV) grid += `<line x1="${pl}" x2="${W - pr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" stroke="rgba(134,207,128,.08)"/><text x="${pl - 8}" y="${(Y(v) + 4).toFixed(1)}" text-anchor="end">${v}</text>`;
+  const pts = hist.map((h, i) => [X(i), Y(h.rating)]);
+  const path = smoothPath(pts), last = hist.length - 1;
+  const date = (t) => (t ? new Date(t * 1000).toLocaleDateString(undefined, { month: 'short', year: 'numeric' }) : '');
+  const dots = pts.map(([x, y], i) => `<circle data-c="${i}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${i === last ? 6 : 3.5}" fill="${i === last ? '#9BE35A' : '#000'}" stroke="#86CF80" stroke-width="2"${i === last ? ' style="filter:drop-shadow(0 0 6px #9BE35A)"' : ''}/>`).join('');
+  const hits = pts.map(([x], i) => `<rect data-c="${i}" x="${(x - 12).toFixed(1)}" y="${pt}" width="24" height="${H - pt - pb}" fill="transparent" style="cursor:pointer"/>`).join('');
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="Contest rating history">
+    <defs><linearGradient id="cg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#86CF80" stop-opacity=".28"/><stop offset="1" stop-color="#86CF80" stop-opacity="0"/></linearGradient></defs>
+    ${grid}<path d="${path} L${X(last).toFixed(1)},${H - pb} L${X(0).toFixed(1)},${H - pb} Z" fill="url(#cg)"/><path d="${path}" fill="none" stroke="#86CF80" stroke-width="2.4" style="filter:drop-shadow(0 0 6px rgba(134,207,128,.5))"/>${dots}${hits}
+    <text x="${pl}" y="${H - 6}">${date(hist[0].time)}</text><text x="${W - pr}" y="${H - 6}" text-anchor="end">${date(hist[last].time)}</text></svg>`;
+}
+
+const ago = (t) => {
+  const s = Date.now() / 1000 - t, rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  if (s < 3600) return rtf.format(-Math.max(1, Math.round(s / 60)), 'minute');
+  if (s < 86400) return rtf.format(-Math.round(s / 3600), 'hour');
+  if (s < 86400 * 30) return rtf.format(-Math.round(s / 86400), 'day');
+  if (s < 86400 * 365) return rtf.format(-Math.round(s / (86400 * 30)), 'month');
+  return rtf.format(-Math.round(s / (86400 * 365)), 'year');
+};
+const dayLabel = (day) => new Date(day * 1000).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const initial = (d) => esc(((d.profile.realName || d.username).trim()[0] || '?').toUpperCase());
+
+/* ---------- Card builders (used by the dashboard and the landing mockup) ---------- */
+function kpiList(d, ins) {
+  const c = d.contest;
+  return [
+    ['Acceptance', ins.acc == null ? '–' : `${ins.acc.toFixed(1)}<small>%</small>`, d.submissions.total ? `${fmt(d.submissions.accepted)} of ${fmt(d.submissions.total)} subs` : 'No submissions yet', true],
+    ['Active days', fmt(ins.year.days), 'in the past year'],
+    ['Current streak', `${ins.cur}<small> d</small>`, ins.cur ? 'keep it going' : 'start one today'],
+    ['Best streak', `${ins.best}<small> d</small>`, 'past year'],
+    ['Contest rating', c?.rating ? fmt(c.rating) : '–', c?.topPercentage ? `top ${c.topPercentage}%` : c?.attended ? `${c.attended} attended` : 'no contests yet', true],
+    ['Submissions', fmt(ins.year.subs), `${fmt(ins.last30.subs)} in last 30 days`],
+  ];
+}
+const kpiHTML = ([l, v, s, hl]) => `<div class="kpi"><div class="label">${l}</div><div class="v${hl ? ' hl' : ''}">${v}</div><div class="s">${esc(s)}</div></div>`;
+
+function difficultyCard(d) {
+  const drow = (k, name) => `<div><div class="drow-top"><b class="d-${k}">${name}</b><span class="mono">${fmt(d.solved[k])} / ${fmt(d.totals[k])}</span></div>
+    <div class="track"><i style="width:${Math.max(1, pct(d.solved[k], d.totals[k]))}%;background:${COLORS[k]};box-shadow:0 0 8px ${COLORS[k]}"></i></div>
+    ${d.beats && d.beats[k] ? `<div class="beats">Beats <b>${Number(d.beats[k]).toFixed(1)}%</b> of users</div>` : ''}</div>`;
+  return `<section class="card dcard"><div class="card-h"><h3>Difficulty</h3><span class="aside">${pct(d.solved.all, d.totals.all).toFixed(1)}% of LeetCode solved</span></div>
+    <div class="diff">${ringSVG(d)}<div class="drows">${drow('easy', 'Easy')}${drow('medium', 'Medium')}${drow('hard', 'Hard')}</div></div></section>`;
+}
+function insightRows(list) {
+  return list.map((i) => `<div class="ins"><span class="pill ${i.tone}">${{ good: 'Good', warn: 'Watch', bad: 'Fix', info: 'Note' }[i.tone]}</span><b>${esc(i.title)}</b><span>${esc(i.detail)}</span></div>`).join('');
+}
+
+/* ---------- Dashboard ---------- */
+function renderApp() {
+  const d = state.data, ins = state.ins, p = d.profile, c = d.contest;
+  const meta = [p.ranking ? `Rank <span class="mono">#${fmt(p.ranking)}</span>` : '', esc(p.country), esc(p.school || p.company)].filter(Boolean);
+
+  $('#sec-overview').innerHTML = `
+    <div class="who">
+      <div class="avatar">${initial(d)}${p.avatar ? `<img src="${esc(p.avatar)}" alt="" onerror="this.remove()">` : ''}</div>
+      <div style="min-width:0">
+        <h1>${esc(p.realName || d.username)}</h1>
+        <div class="handle"><a href="${LC}/u/${encodeURIComponent(d.username)}/" target="_blank" rel="noopener">@${esc(d.username)} ↗</a>${meta.map((m) => `<span>${m}</span>`).join('')}</div>
+        <div class="level">${esc(ins.level)}</div>
+      </div>
+    </div>
+    <div class="solved-big">
+      <div class="n">${fmt(d.solved.all)}</div>
+      <div class="of">solved of <span class="mono">${fmt(d.totals.all)}</span> problems</div>
+      <div class="mixbar" aria-hidden="true"><i style="width:${ins.share.easy}%;background:var(--easy)"></i><i style="width:${ins.share.medium}%;background:var(--medium)"></i><i style="width:${ins.share.hard}%;background:var(--hard)"></i></div>
+      <div class="mixlegend"><span><i class="dot" style="background:var(--easy)"></i>${Math.round(ins.share.easy)}% Easy</span><span><i class="dot" style="background:var(--medium)"></i>${Math.round(ins.share.medium)}% Med</span><span><i class="dot" style="background:var(--hard)"></i>${Math.round(ins.share.hard)}% Hard</span></div>
+    </div>`;
+
+  $('#kpis').innerHTML = kpiList(d, ins).map(kpiHTML).join('');
+
+  const cards = [];
+  cards.push(`<div class="card span2 teaser" id="teaser"></div>`);
+  cards.push(difficultyCard(d));
+
+  const langMax = d.languages[0]?.solved || 1;
+  cards.push(`<section class="card"><div class="card-h"><h3>Languages</h3><span class="aside">${d.languages.length} used</span></div>
+    ${d.languages.length ? `<div class="langs">${d.languages.slice(0, 6).map((l, i) => `<div><div class="lang-top"><span>${esc(l.name)}</span><span class="mono">${fmt(l.solved)}</span></div><div class="track"><i style="width:${pct(l.solved, langMax)}%;background:${i ? '#2E6B3A' : 'var(--green)'}"></i></div></div>`).join('')}</div>` : '<div class="empty">No language data on this profile.</div>'}</section>`);
+
+  cards.push(`<section class="card span2" id="sec-activity"><div class="card-h"><h3>Past year</h3><span class="aside"><span class="mono">${fmt(ins.year.subs)}</span> submissions on <span class="mono">${fmt(ins.year.days)}</span> days</span></div>
+    <div class="heat-scroll" id="heatScroll"></div>
+    <div class="heat-foot"><span class="readout" id="heatReadout">Tap a day to see its count</span>
+    <span class="legend">Less ${[0, 1, 2, 3, 4].map((i) => `<i style="background:var(--heat-${i})"></i>`).join('')} More</span></div></section>`);
+
+  cards.push(`<section class="card span2"><div class="card-h"><h3>What stands out</h3><span class="aside">Instant read from the numbers</span></div>
+    ${ins.insights.length ? `<div class="insights">${insightRows(ins.insights)}</div>` : '<div class="empty">Solve a few more problems and insights will show up here.</div>'}</section>`);
+
+  if (d.tags) {
+    const coreRows = ins.core.slice().sort((a, b) => a.ratio - b.ratio).map((t) => {
+      const col = t.ratio >= 1 ? 'var(--good)' : t.ratio >= .5 ? 'var(--warn)' : 'var(--bad)';
+      return `<div class="core-row"><span class="n" title="${esc(t.name)}">${esc(t.name)}</span><div class="track"><i style="width:${Math.max(2, t.ratio * 100)}%;background:${col};box-shadow:0 0 8px ${col}"></i></div><span class="mono">${t.solved}/${t.target}</span></div>`;
+    }).join('');
+    cards.push(`<section class="card span2" id="sec-topics"><div class="card-h"><h3>Topic coverage</h3><span class="aside">Targets are a rough bar for SDE interviews</span></div>
+      <div class="topics-split"><div><div class="label sub-h">Core interview topics, weakest first</div><div class="core">${coreRows}</div>
+        <div class="core-legend"><span><i class="dot" style="background:var(--bad)"></i>Under half</span><span><i class="dot" style="background:var(--warn)"></i>Halfway</span><span><i class="dot" style="background:var(--good)"></i>Target met</span></div></div>
+      <div><div class="label sub-h">Most solved topics</div><div class="tagcloud">${ins.topTags.map((t) => `<a class="tag" href="${LC}/tag/${encodeURIComponent(t.slug || '')}/" target="_blank" rel="noopener">${esc(t.name)} <span class="mono">${t.solved}</span></a>`).join('')}</div></div></div></section>`);
+  }
+
+  const wdMax = Math.max(1, ...ins.weekday), mMax = Math.max(1, ...ins.months.map((m) => m.subs));
+  const wdTop = ins.weekday.indexOf(Math.max(...ins.weekday));
+  const mTop = ins.months.reduce((bi, m, i, a) => (m.subs > a[bi].subs ? i : bi), 0);
+  const wd = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+  cards.push(`<section class="card span2"><div class="card-h"><h3>When the practice happens</h3><span class="aside">Submissions, past year · busiest highlighted</span></div>
+    <div class="rhythm"><div><div class="label sub-h">By weekday</div><div class="vbars">${ins.weekday.map((v, i) => `<div class="vbar${i === wdTop && v ? ' top' : ''}" title="${v} submissions"><i style="height:${pct(v, wdMax)}%"></i><span>${wd[i]}</span></div>`).join('')}</div></div>
+    <div><div class="label sub-h">By month</div><div class="vbars">${ins.months.map((m, i) => `<div class="vbar${i === mTop && m.subs ? ' top' : ''}" title="${m.subs} submissions in ${esc(m.label)}"><i style="height:${pct(m.subs, mMax)}%"></i><span>${esc(m.label.slice(0, 3))}</span></div>`).join('')}</div></div></div></section>`);
+
+  if (c?.history?.length) {
+    const bestR = Math.max(...c.history.map((h) => h.rating));
+    cards.push(`<section class="card span2" id="sec-contest"><div class="card-h"><h3>Contest rating</h3><span class="aside">${c.badge ? esc(c.badge) + ' · ' : ''}${fmt(c.attended)} contests</span></div>
+      <div class="cstats">
+        <div><div class="label">Rating</div><b>${fmt(c.rating)}</b></div>
+        <div><div class="label">Best</div><b>${fmt(bestR)}</b></div>
+        <div><div class="label">Global rank</div><b>${c.globalRanking ? '#' + fmt(c.globalRanking) : '–'}</b></div>
+        <div><div class="label">Top</div><b>${c.topPercentage != null ? c.topPercentage + '%' : '–'}</b></div>
+      </div>
+      <div class="chart-wrap" id="contestWrap"></div><div class="readout" id="contestReadout">Tap a point for contest details</div></section>`);
+  } else {
+    cards.push(`<section class="card" id="sec-contest"><div class="card-h"><h3>Contests</h3></div><div class="empty">No rated contests yet. Weekly contests run every Sunday morning in India and are the best way to practice under time pressure.</div></section>`);
+  }
+
+  cards.push(`<section class="card" id="sec-recent"><div class="card-h"><h3>Recently accepted</h3><span class="aside">Last ${d.recent.length}</span></div>
+    ${d.recent.length ? `<ul class="recent" id="recent">${d.recent.map((r, i) => `<li${i >= 8 ? ' data-more hidden' : ''}><a href="${LC}/problems/${encodeURIComponent(r.slug)}/" target="_blank" rel="noopener">${esc(r.title)}</a><span class="lang">${esc(r.lang)}</span><span class="ago">${ago(r.time)}</span></li>`).join('')}</ul>
+    ${d.recent.length > 8 ? `<button class="btn btn-dark btn-sm more" id="moreRecent" type="button">Show all ${d.recent.length}</button>` : ''}` : '<div class="empty">No recent accepted submissions are public.</div>'}</section>`);
+
+  cards.push(`<section class="card${c?.history?.length ? '' : ' span2'}"><div class="card-h"><h3>Badges</h3><span class="aside">${d.badges.length} earned</span></div>
+    ${d.badges.length ? `<div class="badges">${d.badges.slice(0, 12).map((b) => `<div class="bdg"><div class="bi">${esc((b.name || '?')[0])}${b.icon ? `<img src="${esc(b.icon)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</div>${esc(b.name)}</div>`).join('')}</div>` : '<div class="empty">No badges yet. A 50-day streak in a month earns the first one.</div>'}</section>`);
+
+  $('#grid').innerHTML = cards.join('');
+  $('#foot').innerHTML = `Data from LeetCode's public profile${d.partial?.length ? ` (some sections unavailable: ${esc(d.partial.join(', '))})` : ''}. Updated ${new Date(d.fetchedAt).toLocaleString()}. Not affiliated with LeetCode.`;
+
+  drawCharts();
+  renderTeaser();
+  observeSections();
+}
+
+function drawCharts() {
+  if (!state.ins || $('#app').hidden) return;
+  const hs = $('#heatScroll');
+  if (hs) { hs.innerHTML = heatSVG(state.ins, hs.clientWidth); hs.scrollLeft = hs.scrollWidth; }
+  const cw = $('#contestWrap');
+  if (cw && state.data?.contest?.history?.length) cw.innerHTML = contestSVG(state.data.contest, cw.clientWidth || 600);
+}
+
+let sectionObserver;
+function observeSections() {
+  sectionObserver?.disconnect();
+  $$('[data-go]').forEach((b) => b.classList.toggle('active', b.dataset.go === 'sec-overview'));
+  if (!('IntersectionObserver' in window)) return;
+  sectionObserver = new IntersectionObserver((entries) => {
+    const vis = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+    if (vis) $$('[data-go]').forEach((b) => b.classList.toggle('active', b.dataset.go === vis.target.id));
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  $$('[id^="sec-"]').forEach((s) => sectionObserver.observe(s));
+}
+
+/* ---------- Coach ---------- */
+const railMQ = matchMedia('(max-width: 1320px)');
+function setPips(on) { ['#navPip', '#btnPip', '#tabPip'].forEach((s) => { const el = $(s); if (el) el.hidden = !on; }); }
+
+function renderCoach() {
+  const body = $('#coachBody'), cs = state.coach;
+  $('#chat').hidden = !(cs && cs.status === 'ready');
+  setPips(cs?.status === 'ready');
+  if (state.data) $('#coachFor').textContent = `Plan for @${state.data.username}`;
+  if (!cs || cs.status === 'loading') {
+    body.innerHTML = `<div class="cstate"><div><span class="typing"><i></i><i></i><i></i></span> Reading the profile and writing a plan…</div>
+      <div class="sk" style="height:18px;width:55%"></div><div class="sk" style="height:52px"></div><div class="sk" style="height:90px"></div><div class="sk" style="height:130px"></div></div>`;
+  } else if (cs.status === 'error') {
+    body.innerHTML = `<div class="cstate"><div class="err">${esc(cs.error)}</div>
+      ${cs.code === 'COACH_NOT_CONFIGURED' ? '<div>Set <span class="mono">GEMINI_API_KEY</span> in your environment and restart. The rest of the dashboard works without it.</div>' : ''}
+      <div><button class="btn btn-sm" type="button" data-retry>Try again</button></div></div>`;
+  } else {
+    const c = cs.data;
+    body.innerHTML = `
+      ${cs.sample ? '<span class="level" style="justify-self:start;margin:0">Sample coach output</span>' : ''}
+      <div><div class="label">${esc(c.level)}</div><p class="c-head">${esc(c.headline)}</p></div>
+      ${c.strengths?.length ? `<div><div class="label">Working well</div><ul class="pts" style="--c:var(--good)">${c.strengths.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
+      ${c.gaps?.length ? `<div><div class="label">Holding the account back</div><ul class="pts" style="--c:var(--bad)">${c.gaps.map((s) => `<li>${esc(s)}</li>`).join('')}</ul></div>` : ''}
+      ${c.plan?.length ? `<div><div class="label">Next two weeks</div><div class="plan">${c.plan.map((s) => `<div class="pstep"><div><b>${esc(s.title)}</b><span>${esc(s.detail)}</span></div></div>`).join('')}</div></div>` : ''}
+      ${c.nextProblems?.length ? `<div><div class="label">Solve these next</div><div class="probs">${c.nextProblems.map((pr) => `<a class="prob" href="${LC}/problemset/?search=${encodeURIComponent(pr.title)}" target="_blank" rel="noopener"><div class="prob-top"><b>${esc(pr.title)}</b><span class="dtag d-${esc(String(pr.difficulty).toLowerCase())}">${esc(pr.difficulty)}</span></div><small>${esc(pr.topic)} · ${esc(pr.why)}</small></a>`).join('')}</div></div>` : ''}
+      ${c.weeklyTarget ? `<div class="target"><small>Weekly target</small>${esc(c.weeklyTarget)}</div>` : ''}`;
+  }
+  renderTeaser();
+}
+
+function renderTeaser() {
+  const t = $('#teaser'); if (!t) return;
+  const cs = state.coach;
+  const head = cs?.status === 'ready' ? esc(cs.data.headline) : cs?.status === 'error' ? 'The coach could not load right now. Open it to try again.' : 'Reading the profile and writing a personal plan…';
+  t.innerHTML = `<div class="icon-circle"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4z"/></svg></div>
+    <div style="min-width:0"><div class="label" style="color:var(--green)">Coach says</div><p>${head}</p></div>
+    <button class="btn btn-sm" type="button" data-open-coach>Open full plan</button>`;
+}
+
+async function loadCoach(force) {
+  const d = state.data; if (!d) return;
+  const token = state.token;
+  state.chat = []; renderChat();
+  if (STATIC || d.username === 'sample_coder') { state.coach = { status: 'ready', data: SAMPLE_COACH, sample: true }; renderCoach(); return; }
+  const key = `ll-coach-${d.username.toLowerCase()}`;
+  const cached = !force && store.get(key);
+  if (cached) { state.coach = { status: 'ready', data: cached }; renderCoach(); return; }
+  state.coach = { status: 'loading' }; renderCoach();
+  try {
+    const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: d.username }) });
+    const j = await r.json().catch(() => ({}));
+    if (token !== state.token) return;
+    if (!r.ok) throw Object.assign(new Error(j.error || 'The coach could not answer.'), { code: j.code });
+    state.coach = { status: 'ready', data: j.coach };
+    store.set(key, j.coach);
+  } catch (e) {
+    if (token !== state.token) return;
+    state.coach = { status: 'error', error: e.message || 'Could not reach the coach.', code: e.code };
+  }
+  renderCoach();
+}
+
+function mdLite(text) {
+  return esc(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').split(/\n{2,}/).map((b) => {
+    const lines = b.split('\n');
+    if (lines.every((l) => /^\s*[-*•]\s+/.test(l))) return `<ul>${lines.map((l) => `<li>${l.replace(/^\s*[-*•]\s+/, '')}</li>`).join('')}</ul>`;
+    return lines.map((l) => `<p>${l.replace(/^\s*[-*•]\s+/, '• ')}</p>`).join('');
+  }).join('');
+}
+function renderChat() {
+  $('#msgs').innerHTML = state.chat.map((m) => `<div class="msg ${m.role}">${m.role === 'model' ? mdLite(m.text) : esc(m.text)}</div>`).join('')
+    + (state.chatBusy ? '<div class="msg model"><span class="typing"><i></i><i></i><i></i></span></div>' : '');
+  $('#suggest').hidden = state.chat.length > 0;
+}
+async function ask(q) {
+  q = q.trim(); if (!q || state.chatBusy || !state.data) return;
+  const token = state.token;
+  state.chat.push({ role: 'user', text: q }); state.chatBusy = true; renderChat();
+  let answer;
+  if (STATIC || state.data.username === 'sample_coder') {
+    await new Promise((r) => setTimeout(r, 700));
+    answer = 'This is the sample profile, so the live coach is not connected. Look up a real username and Gemini answers using the full profile: solved counts, topic gaps, streaks and contests.';
+  } else {
+    const c = state.coach?.data;
+    const seed = c ? [{ role: 'model', text: `${c.headline}\nGaps: ${(c.gaps || []).join('; ')}\nPlan: ${(c.plan || []).map((p) => p.title).join('; ')}` }] : [];
+    const history = [...seed, ...state.chat.slice(0, -1)].slice(-8);
+    try {
+      const r = await fetch('/api/coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: state.data.username, question: q, history }) });
+      const j = await r.json().catch(() => ({}));
+      answer = r.ok ? j.answer : (j.error || 'The coach could not answer. Try again.');
+    } catch { answer = 'Could not reach the coach. Check your connection and try again.'; }
+  }
+  if (token !== state.token) return;
+  state.chatBusy = false; state.chat.push({ role: 'model', text: answer }); renderChat();
+  $('#msgs').lastElementChild?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function openCoach() {
+  if (!railMQ.matches) { $('#coach').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  $('#coach').classList.add('open'); $('#scrim').hidden = false; document.body.style.overflow = 'hidden';
+}
+function closeCoach() { $('#coach').classList.remove('open'); $('#scrim').hidden = true; document.body.style.overflow = ''; }
+
+/* ---------- Views ---------- */
+function showApp() { $('#landing').hidden = true; $('#app').hidden = false; }
+function showLanding() {
+  closeCoach(); $('#app').hidden = true; $('#landing').hidden = false; window.scrollTo({ top: 0 });
+  renderHeroVisual();
+  if (!STATIC) history.replaceState(null, '', location.pathname);
+}
+function skeleton(name) {
+  showApp();
+  $('#sec-overview').innerHTML = `<div class="who"><div class="avatar sk"></div><div style="display:grid;gap:8px"><div class="sk" style="height:26px;width:220px"></div><div class="sk" style="height:14px;width:160px"></div></div></div><div class="sk" style="height:66px;width:150px"></div>`;
+  $('#kpis').innerHTML = Array(6).fill('<div class="kpi"><div class="sk" style="height:12px;width:70%"></div><div class="sk" style="height:26px;width:50%;margin-top:10px"></div></div>').join('');
+  $('#grid').innerHTML = `<div class="card"><div class="sk" style="height:170px"></div></div><div class="card"><div class="sk" style="height:170px"></div></div><div class="card span2"><div class="sk" style="height:130px"></div></div><div class="card span2"><div class="sk" style="height:160px"></div></div>`;
+  $('#foot').textContent = `Looking up ${name} on LeetCode…`;
+  state.coach = { status: 'loading' }; renderCoach();
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 3400); }
+
+async function analyze(input, opts = {}) {
+  const name = opts.sample ? 'sample_coder' : parseUsername(input);
+  if (!name) { const msg = 'Enter a LeetCode username like "Pritam_roy1305" or a profile link.'; if ($('#landing').hidden) toast(msg); else $('#heroErr').textContent = msg; return; }
+  $('#heroErr').textContent = '';
+  if (STATIC && !opts.sample) { toast('Live lookups work once the app is deployed. Showing the sample profile.'); return analyze('', { sample: true }); }
+  const token = ++state.token;
+  $('#q').value = ''; $('#heroQ').value = '';
+  closeCoach();
+  skeleton(name); window.scrollTo({ top: 0 });
+  try {
+    let data;
+    if (opts.sample) data = makeSample();
+    else {
+      const r = await fetch(`/api/leetcode?username=${encodeURIComponent(name)}`);
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || 'Could not load that profile.');
+      data = j;
+    }
+    if (token !== state.token) return;
+    state.data = data; state.ins = computeInsights(data);
+    renderApp();
+    document.title = `${data.username} · LeetLens`;
+    if (!STATIC && !opts.sample) history.replaceState(null, '', `?u=${encodeURIComponent(data.username)}`);
+    loadCoach(false);
+  } catch (e) {
+    if (token !== state.token) return;
+    showLanding();
+    $('#heroErr').textContent = e.message || 'Something went wrong. Try again.';
+  }
+}
+
+/* ---------- Events ---------- */
+$('#heroSearch').addEventListener('submit', (e) => { e.preventDefault(); analyze($('#heroQ').value); });
+$('#topSearch').addEventListener('submit', (e) => { e.preventDefault(); $('#q').blur(); analyze($('#q').value); });
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('[data-user],[data-sample],[data-open-coach],[data-retry],[data-home],[data-go],[data-focus-search],#moreRecent');
+  if (!t) return;
+  if (t.dataset.user) analyze(t.dataset.user);
+  else if (t.dataset.sample) analyze('', { sample: true });
+  else if ('openCoach' in t.dataset) openCoach();
+  else if ('retry' in t.dataset) loadCoach(true);
+  else if ('home' in t.dataset) showLanding();
+  else if ('focusSearch' in t.dataset) { $('#heroQ').scrollIntoView({ behavior: 'smooth', block: 'center' }); setTimeout(() => $('#heroQ').focus({ preventScroll: true }), 350); }
+  else if (t.dataset.go) { closeCoach(); const s = document.getElementById(t.dataset.go); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+  else if (t.id === 'moreRecent') { $$('#recent [data-more]').forEach((li) => { li.hidden = false; }); t.remove(); }
+});
+function readHeat(r) { const n = +r.dataset.n; $('#heatReadout').innerHTML = `<b>${n} submission${n === 1 ? '' : 's'}</b> on ${dayLabel(+r.dataset.d)}`; }
+function readContest(el) { const h = state.data.contest.history[+el.dataset.c]; $('#contestReadout').innerHTML = `<b>${esc(h.title)}</b> · rating ${h.rating}, rank ${fmt(h.ranking)}, solved ${h.solved}/${h.total}`; }
+function pointRead(e) {
+  const h = e.target.closest('rect[data-d]'); if (h) return readHeat(h);
+  const c = e.target.closest('#contestWrap [data-c]'); if (c && state.data?.contest) return readContest(c);
+}
+$('#grid').addEventListener('click', pointRead);
+$('#grid').addEventListener('pointerover', (e) => { if (e.pointerType === 'mouse') pointRead(e); });
+$('#closeCoach').addEventListener('click', closeCoach);
+$('#scrim').addEventListener('click', closeCoach);
+$('#regen').addEventListener('click', () => loadCoach(true));
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCoach(); });
+railMQ.addEventListener?.('change', () => { if (!railMQ.matches) closeCoach(); });
+$('#askForm').addEventListener('submit', (e) => { e.preventDefault(); const v = $('#askQ').value; $('#askQ').value = ''; ask(v); });
+$('#suggest').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) ask(b.textContent); });
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => { drawCharts(); if (!$('#landing').hidden) renderHeroVisual(); }, 150); });
+
+/* ---------- Sample data (labelled as a sample wherever it appears) ---------- */
+function rngFrom(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+function makeSample() {
+  const rnd = rngFrom(1305), now = new Date();
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) / 1000;
+  const map = {};
+  for (let i = 0; i < 365; i++) {
+    const day = today - i * DAY, dow = new Date(day * 1000).getUTCDay();
+    let p = dow === 0 || dow === 6 ? 0.78 : 0.5;
+    if (i > 44 && i < 70) p = 0.1; if (i < 9) p = 1; if (i > 200 && i < 230) p = 0.25;
+    if (rnd() < p) map[day] = 1 + Math.floor(rnd() * rnd() * 14);
+  }
+  const titles = [['Longest Substring Without Repeating Characters', 'longest-substring-without-repeating-characters', 'cpp'], ['Coin Change', 'coin-change', 'cpp'], ['Number of Islands', 'number-of-islands', 'python3'], ['Top K Frequent Elements', 'top-k-frequent-elements', 'cpp'], ['Daily Temperatures', 'daily-temperatures', 'cpp'], ['Binary Tree Level Order Traversal', 'binary-tree-level-order-traversal', 'cpp'], ['Search in Rotated Sorted Array', 'search-in-rotated-sorted-array', 'cpp'], ['Merge Intervals', 'merge-intervals', 'python3'], ['Product of Array Except Self', 'product-of-array-except-self', 'cpp'], ['Valid Parentheses', 'valid-parentheses', 'cpp'], ['Kth Largest Element in an Array', 'kth-largest-element-in-an-array', 'cpp'], ['Group Anagrams', 'group-anagrams', 'python3'], ['Container With Most Water', 'container-with-most-water', 'cpp'], ['House Robber', 'house-robber', 'cpp'], ['Linked List Cycle', 'linked-list-cycle', 'cpp']];
+  const recent = titles.map(([title, slug, lang], i) => ({ title, slug, lang, time: Math.floor(Date.now() / 1000) - Math.floor((i * 0.9 + rnd() * 0.6) * DAY) - 3600 * (2 + i) }));
+  let rating = 1480; const history = [];
+  for (let i = 0; i < 11; i++) { rating += Math.round((rnd() - 0.38) * 70); history.push({ title: `Weekly Contest ${452 + i * 3}`, time: today - (11 - i) * 21 * DAY, rating, ranking: 9000 + Math.floor(rnd() * 14000), solved: 1 + Math.floor(rnd() * 3), total: 4 }); }
+  const T = (name, solved) => ({ name, slug: name.toLowerCase().replace(/[()]/g, '').replace(/\s+/g, '-'), solved });
+  return {
+    username: 'sample_coder', fetchedAt: new Date().toISOString(),
+    profile: { realName: 'Sample Coder', avatar: null, ranking: 248113, reputation: 12, country: 'India', company: '', school: 'Example Institute of Technology', about: '', skillTags: [], github: '', linkedin: '', twitter: '' },
+    solved: { all: 332, easy: 162, medium: 151, hard: 19 }, totals: { all: 3594, easy: 880, medium: 1868, hard: 846 },
+    submissions: { accepted: 610, total: 1032 }, beats: { all: 0, easy: 88.4, medium: 79.1, hard: 61.2 },
+    calendar: { map, streak: 23, totalActiveDays: 196, activeYears: [2025, 2026] },
+    languages: [{ name: 'C++', solved: 268 }, { name: 'Python3', solved: 61 }, { name: 'Java', solved: 12 }],
+    tags: {
+      fundamental: [T('Array', 168), T('String', 74), T('Sorting', 41), T('Two Pointers', 33), T('Linked List', 21), T('Stack', 19), T('Matrix', 18), T('Simulation', 15), T('Queue', 7)],
+      intermediate: [T('Hash Table', 71), T('Math', 39), T('Tree', 27), T('Greedy', 26), T('Binary Tree', 25), T('Depth-First Search', 24), T('Binary Search', 22), T('Breadth-First Search', 14), T('Prefix Sum', 13), T('Sliding Window', 12), T('Bit Manipulation', 10), T('Heap (Priority Queue)', 9), T('Recursion', 9)],
+      advanced: [T('Dynamic Programming', 18), T('Backtracking', 6), T('Graph', 5), T('Monotonic Stack', 5), T('Divide and Conquer', 4), T('Trie', 2), T('Union Find', 1), T('Topological Sort', 1)],
+    },
+    contest: { attended: history.length, rating, globalRanking: 161204, totalParticipants: 690000, topPercentage: 38.5, badge: null, history },
+    recent,
+    badges: [{ name: '50 Days Badge 2026', icon: null }, { name: '100 Days Badge 2025', icon: null }, { name: 'Daily Coding Challenge', icon: null }],
+    partial: [],
+  };
+}
+const SAMPLE_COACH = {
+  level: 'Interview core',
+  headline: 'You have a solid base of 332 solves, but the account is light on the topics that decide medium and hard interview rounds.',
+  strengths: ['151 Medium solves and 79% beats on Medium, so the fundamentals are real.', 'Weekends are consistent, with a 23-day best streak.', 'Arrays, strings and hash maps are well covered.'],
+  gaps: ['Dynamic Programming sits at 18 solves. Most loops have at least one DP-flavored question.', 'Graphs are almost untouched: 5 Graph and 1 Union Find problem.', 'Only 19 Hard solves, about 6% of the total.', '59% acceptance means a lot of retries. Edge cases are slipping.'],
+  plan: [
+    { title: 'Run a DP block', detail: 'Ten days, one DP pattern a day: 1D, knapsack, LIS, grid paths, intervals. Re-solve each from memory two days later.' },
+    { title: 'Learn the graph toolkit', detail: 'BFS on grids, topological sort, Union Find, Dijkstra. Two problems for each.' },
+    { title: 'One Hard every Saturday', detail: 'Time-box it to 45 minutes, then read the editorial and write it yourself.' },
+    { title: 'Dry-run before submit', detail: 'Write three test cases by hand before every submit to lift acceptance past 70%.' },
+  ],
+  nextProblems: [
+    { title: 'Longest Increasing Subsequence', difficulty: 'Medium', topic: 'Dynamic Programming', why: 'The base pattern for a whole family of DP questions.' },
+    { title: 'Partition Equal Subset Sum', difficulty: 'Medium', topic: 'Dynamic Programming', why: 'Teaches 0/1 knapsack thinking.' },
+    { title: 'Course Schedule', difficulty: 'Medium', topic: 'Graph', why: 'Topological sort, asked everywhere.' },
+    { title: 'Number of Provinces', difficulty: 'Medium', topic: 'Union Find', why: 'Cleanest intro to Union Find.' },
+    { title: 'Network Delay Time', difficulty: 'Medium', topic: 'Graph', why: 'Dijkstra without extra noise.' },
+    { title: 'Trapping Rain Water', difficulty: 'Hard', topic: 'Two Pointers', why: 'A Hard that builds on what you already know.' },
+  ],
+  weeklyTarget: '14 problems: 2 Easy, 10 Medium, 2 Hard, with at least 6 from DP or Graph.',
+};
+
+/* ---------- Landing mockup, built from the same card code with sample numbers ---------- */
+function renderHeroVisual() {
+  const el = $('#heroVisual'); if (!el || $('#landing').hidden) return;
+  const d = makeSample(), ins = computeInsights(d);
+  const k = kpiList(d, ins);
+  el.innerHTML = `${difficultyCard(d)}
+    <div class="hv-kpis">${[k[0], k[2], k[4], k[1]].map(kpiHTML).join('')}</div>
+    <div class="hv-row">${insightRows(ins.insights.filter((i) => i.tone !== 'info').slice(0, 2))}</div>
+    <div style="text-align:right;color:var(--faint);font-size:12px">Sample profile</div>`;
+}
+
+/* ---------- Boot ---------- */
+if (STATIC) $('#banner').hidden = false;
+renderHeroVisual();
+if (!STATIC) {
+  const u = new URLSearchParams(location.search).get('u');
+  if (u) analyze(u);
+}
+})();
+</script>
+</body>
+</html>
